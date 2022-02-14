@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-contract DonutRewards is Ownable {
+contract QuestRewards is Ownable {
     struct Task {
         bytes32 merkleRoot;
         uint256 reward;
@@ -17,8 +17,8 @@ contract DonutRewards is Ownable {
     mapping(uint256 => mapping(address => bool)) public claimed;
     IERC20 public defaultRewardToken;
 
-    constructor(IERC20 rewardTokenAddress) {
-        defaultRewardToken = rewardTokenAddress;
+    constructor(IERC20 defaultRewardTokenAddress) {
+        defaultRewardToken = defaultRewardTokenAddress;
     }
 
     event TaskCreated(uint256 taskId, uint256 reward);
@@ -27,7 +27,7 @@ contract DonutRewards is Ownable {
     event MerkleRootChanged(uint256 taskId, bytes32 newMerkleRoot);
     event TaskDeleted(uint256 taskId);
 
-    function createTask(uint256 reward, uint256 taskId) public onlyOwner {
+    function createTask(uint256 reward, uint256 taskId) external onlyOwner {
         require(reward != 0, "Reward can't be zero");
         require(!taskExists[taskId], "Task with taskId already exists");
         tasks[taskId] = Task(bytes32(0), reward, 1, defaultRewardToken);
@@ -35,14 +35,17 @@ contract DonutRewards is Ownable {
         emit TaskCreated(taskId, reward);
     }
 
-    function changeReward(uint256 taskId, uint256 newReward) public onlyOwner {
+    function changeReward(uint256 taskId, uint256 newReward)
+        external
+        onlyOwner
+    {
         require(taskExists[taskId], "Task does not exist");
         tasks[taskId].reward = newReward;
         emit RewardAmountChanged(taskId, tasks[taskId].reward);
     }
 
     function changeMerkleRoot(uint256 taskId, bytes32 newMerkleRoot)
-        public
+        external
         onlyOwner
     {
         require(taskExists[taskId], "Task does not exist");
@@ -50,7 +53,9 @@ contract DonutRewards is Ownable {
         emit MerkleRootChanged(taskId, tasks[taskId].merkleRoot);
     }
 
-    function changeRewardToken(uint256 taskId, address newRewardToken) public {
+    function changeRewardToken(uint256 taskId, address newRewardToken)
+        external
+    {
         require(taskExists[taskId], "Task does not exist");
         require(newRewardToken != address(0), "Null address can't be a token");
         tasks[taskId].rewardToken = IERC20(newRewardToken);
@@ -58,7 +63,7 @@ contract DonutRewards is Ownable {
     }
 
     function updateMerkleRoot(uint256 taskId, bytes32 newMerkleRoot)
-        public
+        external
         onlyOwner
     {
         require(taskExists[taskId], "Task does not exist");
