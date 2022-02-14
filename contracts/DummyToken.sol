@@ -7,6 +7,6 @@ contract DummyToken is ERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
 
     function mint(uint256 amount, address destination) external {
-        _mint(destination, amount * decimals());
+        _mint(destination, amount);
     }
 }

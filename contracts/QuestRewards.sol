@@ -23,7 +23,7 @@ contract QuestRewards is Ownable {
 
     event TaskCreated(uint256 taskId, uint256 reward);
     event RewardAmountChanged(uint256 taskId, uint256 newReward);
-    event RewardTokenChanged(uint256 taskId, address newRewardToken);
+    event RewardTokenChanged(uint256 taskId, IERC20 newRewardToken);
     event MerkleRootChanged(uint256 taskId, bytes32 newMerkleRoot);
     event TaskDeleted(uint256 taskId);
 
@@ -55,11 +55,12 @@ contract QuestRewards is Ownable {
 
     function changeRewardToken(uint256 taskId, address newRewardToken)
         external
+        onlyOwner
     {
         require(taskExists[taskId], "Task does not exist");
         require(newRewardToken != address(0), "Null address can't be a token");
         tasks[taskId].rewardToken = IERC20(newRewardToken);
-        emit RewardTokenChanged(taskId, newRewardToken);
+        emit RewardTokenChanged(taskId, tasks[taskId].rewardToken);
     }
 
     function updateMerkleRoot(uint256 taskId, bytes32 newMerkleRoot)
