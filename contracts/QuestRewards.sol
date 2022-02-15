@@ -76,7 +76,7 @@ contract QuestRewards is Ownable {
 
     function claim(uint256 taskId, bytes32[] calldata merkleProof) external {
         require(taskExists[taskId], "Task does not exist");
-        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, taskId));
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
         bool valid = MerkleProof.verify(
             merkleProof,
             tasks[taskId].merkleRoot,
@@ -111,5 +111,5 @@ contract QuestRewards is Ownable {
         require(success, "Ether sweep failed");
     }
 
-    fallback() external payable {}
+    receive() external payable {}
 }

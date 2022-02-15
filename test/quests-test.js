@@ -1,6 +1,8 @@
 const { expect } = require("chai");
 const { Signer } = require("ethers");
 const { ethers, tasks } = require("hardhat");
+const keccak256 = require("keccak256");
+const { MerkleTree } = require("merkletreejs");
 console.clear();
 
 describe("DummyToken", async function () {
@@ -437,5 +439,140 @@ describe("Sweep Ether", async function () {
       [deployer, quest],
       [ethers.utils.parseEther("200"), ethers.utils.parseEther("-200")]
     );
+  });
+});
+
+async function createRoot() {
+  let _ = await ethers.getSigners();
+  const signersEligible = _.slice(0, -3);
+  const signersNotEligible = _.slice(-3);
+  const accountsEligible = signersEligible.map((x) => x.address);
+  const accountsNotEligible = signersNotEligible.map((x) => x.address);
+  const leaves = accountsEligible.map((x) => keccak256(x));
+  const tree = new MerkleTree(leaves, keccak256, { sort: true });
+  const root = tree.getHexRoot();
+  return [accountsEligible, accountsNotEligible, tree, root];
+}
+describe("Claim Reward", async function () {
+  it("Should revert when taskId does not exist", async function () {
+    const [dummyToken, quest, deployer, user] = await setup();
+    const [accountsEligible, accountsNotEligible, tree, root] =
+      await createRoot();
+    const createTask = await quest.createTask(ethers.utils.parseEther("2"), 24);
+    await createTask.wait();
+    const changeRoot = await quest.changeMerkleRoot(24, root);
+    await changeRoot.wait();
+    await expect(
+      quest.claim(23, tree.getHexProof(keccak256(user.address)))
+    ).to.be.revertedWith("Task does not exist");
+  });
+  it("Should revert when ineligible user tries to claim", async function () {
+    const [dummyToken, quest, deployer, user] = await setup();
+    const [accountsEligible, accountsNotEligible, tree, root] =
+      await createRoot();
+    const createTask = await quest.createTask(ethers.utils.parseEther("2"), 24);
+    await createTask.wait();
+    const changeRoot = await quest.changeMerkleRoot(24, root);
+    await changeRoot.wait();
+    const ineligibleContract = quest.connect(ethers.provider.getSigner(19));
+    await expect(
+      ineligibleContract.claim(
+        24,
+        tree.getHexProof(keccak256(accountsEligible[0]))
+      )
+    ).to.be.revertedWith("Valid proof required");
+  });
+
+  it("Should transfer reward tokens when eligible user tries to claim", async function () {
+    const [dummyToken, quest, deployer, user] = await setup();
+    const [accountsEligible, accountsNotEligible, tree, root] =
+      await createRoot();
+    const createTask = await quest.createTask(ethers.utils.parseEther("2"), 24);
+    await createTask.wait();
+    const tokens = await dummyToken.mint(
+      ethers.utils.parseEther("2"),
+      quest.address
+    );
+    await tokens.wait();
+    const changeRoot = await quest.changeMerkleRoot(24, root);
+    await changeRoot.wait();
+    const userContract = quest.connect(user);
+    await expect(() =>
+      userContract.claim(24, tree.getHexProof(keccak256(user.address)))
+    ).to.changeTokenBalances(
+      dummyToken,
+      [userContract, user],
+      [ethers.utils.parseEther("-2"), ethers.utils.parseEther("2")]
+    );
+
+    it("Should mark user claimed", async function () {
+      const claimed = await userContract.claimed(24, user.address);
+      expect(claimed).to.equal(true);
+    });
+  });
+
+  it("Should succeed when all users try to claim", async function () {
+    const [dummyToken, quest, deployer, user] = await setup();
+    const [accountsEligible, accountsNotEligible, tree, root] =
+      await createRoot();
+    const createTask = await quest.createTask(ethers.utils.parseEther("2"), 24);
+    await createTask.wait();
+    const tokens = await dummyToken.mint(
+      ethers.utils.parseEther("34"),
+      quest.address
+    );
+    await tokens.wait();
+    const changeRoot = await quest.changeMerkleRoot(24, root);
+    await changeRoot.wait();
+
+    const allSigners = await ethers.getSigners();
+    const signers = allSigners.slice(0, -3);
+    for (const signer of signers) {
+      const signerContract = quest.connect(signer);
+      await expect(() =>
+        signerContract.claim(24, tree.getHexProof(keccak256(signer.address)))
+      ).to.changeTokenBalances(
+        dummyToken,
+        [signerContract, signer],
+        [ethers.utils.parseEther("-2"), ethers.utils.parseEther("2")]
+      );
+    }
+  });
+
+  it("Should revert when reward is already claimed", async function () {
+    const [dummyToken, quest, deployer, user] = await setup();
+    const [accountsEligible, accountsNotEligible, tree, root] =
+      await createRoot();
+    const createTask = await quest.createTask(ethers.utils.parseEther("2"), 24);
+    await createTask.wait();
+    const tokens = await dummyToken.mint(
+      ethers.utils.parseEther("2"),
+      quest.address
+    );
+    await tokens.wait();
+    const changeRoot = await quest.changeMerkleRoot(24, root);
+    await changeRoot.wait();
+    const claimTxn = await quest.claim(
+      24,
+      tree.getHexProof(keccak256(deployer.address))
+    );
+    await claimTxn.wait();
+    await expect(
+      quest.claim(24, tree.getHexProof(keccak256(deployer.address)))
+    ).to.be.revertedWith("Reward already claimed");
+  });
+
+  it("Should revert when transfer fails", async function () {
+    const [dummyToken, quest, deployer, user] = await setup();
+    const [accountsEligible, accountsNotEligible, tree, root] =
+      await createRoot();
+    const createTask = await quest.createTask(ethers.utils.parseEther("2"), 24);
+    await createTask.wait();
+    const changeRoot = await quest.changeMerkleRoot(24, root);
+    await changeRoot.wait();
+    const userContract = quest.connect(user);
+    await expect(
+      userContract.claim(24, tree.getHexProof(keccak256(user.address)))
+    ).to.revertedWith("ERC20: transfer amount exceeds balance");
   });
 });

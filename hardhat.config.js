@@ -4,6 +4,7 @@ require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-gas-reporter");
 require("solidity-coverage");
+require("hardhat-tracer");
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -31,8 +32,11 @@ module.exports = {
     },
   },
   gasReporter: {
-    enabled: process.env.REPORT_GAS !== undefined,
+    enabled: false,
     currency: "USD",
+    token: "XDAI",
+    gasPriceApi: "https://blockscout.com/xdai/mainnet/api/v1/gas-price-oracle",
+    coinmarketcap: process.env.COINMARKETCAP_API,
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
