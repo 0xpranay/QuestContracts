@@ -110,4 +110,6 @@ contract QuestRewards is Ownable {
         (bool success, ) = owner().call{value: address(this).balance}("");
         require(success, "Ether sweep failed");
     }
+
+    fallback() external payable {}
 }

@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 const { Signer } = require("ethers");
-const { ethers } = require("hardhat");
+const { ethers, tasks } = require("hardhat");
 console.clear();
 
 describe("DummyToken", async function () {
@@ -9,12 +9,14 @@ describe("DummyToken", async function () {
     const dummyContract = await hre.ethers.getContractFactory("DummyToken");
     const dummyToken = await dummyContract.deploy("Gnosis", "GNO");
     const quest = await questContract.deploy(dummyToken.address);
-    const deployer = new ethers.Wallet(
+    const deployerWallet = new ethers.Wallet(
       "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
     );
-    const user = new ethers.Wallet(
+    const deployer = deployerWallet.connect(ethers.provider);
+    const userWallet = new ethers.Wallet(
       "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
     );
+    const user = userWallet.connect(ethers.provider);
     return [dummyToken, quest, deployer, user];
   }
   it("Should mint 1000 tokens to user", async function () {
@@ -36,12 +38,14 @@ async function setup() {
   const dummyContract = await hre.ethers.getContractFactory("DummyToken");
   const dummyToken = await dummyContract.deploy("Gnosis", "GNO");
   const quest = await questContract.deploy(dummyToken.address);
-  const deployer = new ethers.Wallet(
+  const deployerWallet = new ethers.Wallet(
     "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
   );
-  const user = new ethers.Wallet(
+  const deployer = deployerWallet.connect(ethers.provider);
+  const userWallet = new ethers.Wallet(
     "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
   );
+  const user = userWallet.connect(ethers.provider);
   return [dummyToken, quest, deployer, user];
 }
 
@@ -325,5 +329,113 @@ describe("Update Merkle Root", async function () {
     )
       .to.emit(quest, "MerkleRootChanged")
       .withArgs(2, ethers.utils.hexZeroPad("0xacff", 32));
+  });
+});
+
+describe("Claim Reward", async function () {});
+
+describe("Destroy Task", async function () {
+  it("Should revert when task does not exist", async function () {
+    const [dummyToken, quest, deployer, user] = await setup();
+    await expect(quest.destroyTask(1)).to.be.revertedWith(
+      "Task does not exist"
+    );
+  });
+  it("Should revert when called by non owner", async function () {
+    const [dummyToken, quest, deployer, user] = await setup();
+    const txn = await quest.createTask(200, 2);
+    await txn.wait();
+    const userContract = quest.connect(ethers.provider.getSigner(1));
+    await expect(userContract.destroyTask(2)).to.be.revertedWith(
+      "Ownable: caller is not the owner"
+    );
+  });
+  it("Should emit the TaskDeleted event", async function () {
+    const [dummyToken, quest, deployer, user] = await setup();
+    const txn = await quest.createTask(200, 2);
+    await txn.wait();
+    await expect(quest.destroyTask(2))
+      .to.emit(quest, "TaskDeleted")
+      .withArgs(2);
+  });
+  it("Should delete the task", async function () {
+    const [dummyToken, quest, deployer, user] = await setup();
+    const txn = await quest.createTask(200, 2);
+    await txn.wait();
+    const txn1 = await quest.destroyTask(2);
+    await txn1.wait();
+    const taskIntended = {
+      merkleRoot: ethers.utils.hexZeroPad("0x", 32),
+      reward: ethers.BigNumber.from("0"),
+      round: ethers.BigNumber.from("0"),
+      rewardToken: ethers.utils.hexZeroPad("0x", 20),
+    };
+    const result = await quest.tasks(2);
+    const taskReceived = {
+      merkleRoot: result["merkleRoot"],
+      reward: result["reward"],
+      round: result["round"],
+      rewardToken: result["rewardToken"],
+    };
+    expect(taskReceived).to.deep.equal(taskIntended);
+    expect(await quest.taskExists(2)).to.equal(false);
+  });
+});
+
+describe("Sweep Tokens", async function () {
+  it("Should revert when caller is not owner", async function () {
+    const [dummyToken, quest, deployer, user] = await setup();
+    const userQuest = quest.connect(ethers.provider.getSigner(1));
+    const txn1 = await dummyToken.mint(
+      ethers.utils.parseEther("1000"),
+      userQuest.address
+    );
+    await txn1.wait();
+    await expect(userQuest.sweepTokens(dummyToken.address)).to.be.revertedWith(
+      "Ownable: caller is not the owner"
+    );
+  });
+  it("Should transfer tokens to owner", async function () {
+    const [dummyToken, quest, deployer, user] = await setup();
+    const txn1 = await dummyToken.mint(1000, quest.address);
+    await txn1.wait();
+    await expect(() =>
+      quest.sweepTokens(dummyToken.address)
+    ).to.changeTokenBalances(dummyToken, [quest, deployer], [-1000, 1000]);
+  });
+});
+
+describe("Sweep Ether", async function () {
+  it("Should revert when called by non owner", async function () {
+    const [dummyToken, quest, deployer, user] = await setup();
+    const userQuest = quest.connect(user);
+    await expect(userQuest.sweepEther()).to.be.revertedWith(
+      "'Ownable: caller is not the owner"
+    );
+  });
+  it("Should accept Ether", async function () {
+    const [dummyToken, quest, deployer, user] = await setup();
+    await expect(
+      async () =>
+        await user.sendTransaction({
+          to: quest.address,
+          value: ethers.utils.parseEther("200"),
+        })
+    ).to.changeEtherBalances(
+      [user, quest],
+      [ethers.utils.parseEther("-200"), ethers.utils.parseEther("200")]
+    );
+  });
+  it("Should send ether to the owner", async function () {
+    const [dummyToken, quest, deployer, user] = await setup();
+    const sendTxn = await user.sendTransaction({
+      to: quest.address,
+      value: ethers.utils.parseEther("200"),
+    });
+    await sendTxn.wait();
+    await expect(() => quest.sweepEther()).to.changeEtherBalances(
+      [deployer, quest],
+      [ethers.utils.parseEther("200"), ethers.utils.parseEther("-200")]
+    );
   });
 });
