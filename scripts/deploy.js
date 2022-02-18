@@ -37,7 +37,7 @@ async function main() {
   await createTaskTxn1.wait();
   const rootUpdate1 = await quest.changeMerkleRoot(
     0,
-    "0xe7cd2ffb4be68f521af5699a003fee50e8f6be30b053f6c2322fea962767053c"
+    "0x8a4e3950bbf317e136601d0f71d6a004ad9df7e9f489ccda991efda2236679c7"
   );
   await rootUpdate1.wait();
   const createTaskTxn2 = await quest.createTask(
@@ -47,7 +47,7 @@ async function main() {
   await createTaskTxn2.wait();
   const rootUpdate2 = await quest.changeMerkleRoot(
     1,
-    "0xef757f1ebc5879337a1ffe6377792b52684a24d3c8c01ae958947b9319ac0eaa"
+    "0x54c9c696c952197f153bbd79c692e6a84c9ebfc01486bcdbf74efd1acb599b2a"
   );
   await rootUpdate2.wait();
   const createTaskTxn3 = await quest.createTask(
@@ -67,7 +67,7 @@ async function main() {
   await createTaskTxn4.wait();
   const rootUpdate4 = await quest.changeMerkleRoot(
     3,
-    "0x5fb0685af3911aef364c752f69bc1d474fc8f3f78fec565e3a45f7cf2d4438aa"
+    "0x1f4895a102727392b5f342b95a42950fa3f9a0edafe52fc8bf6f1e69c3c23963"
   );
   await rootUpdate4.wait();
 

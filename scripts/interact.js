@@ -3,12 +3,15 @@ const { ethers } = require("hardhat");
 console.clear();
 async function main() {
   // Our code will go here
-  const questContract = await ethers.getContractAt(
+  const quest = await ethers.getContractAt(
     "QuestRewards",
-    "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+    "0x809d550fca64d94bd9f66e60752a544199cfac3d"
   );
-  const tokenAddress = await questContract.defaultRewardToken();
-  console.log(tokenAddress);
+  const rootUpdate1 = await quest.updateMerkleRoot(
+    0,
+    "0xe7cd2ffb4be68f521af5699a003fee50e8f6be30b053f6c2322fea962767053c"
+  );
+  await rootUpdate1.wait();
 }
 main()
   .then(() => process.exit(0))

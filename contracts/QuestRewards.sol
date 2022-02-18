@@ -111,5 +111,10 @@ contract QuestRewards is Ownable {
         require(success, "Ether sweep failed");
     }
 
+    function getRound(uint256 taskId) public view returns (uint256) {
+        require(taskExists[taskId], "Task does not exist");
+        return tasks[taskId].round;
+    }
+
     receive() external payable {}
 }
