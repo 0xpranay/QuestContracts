@@ -16,60 +16,29 @@ async function main() {
 
   // We get the contract to deploy
   const questContract = await hre.ethers.getContractFactory("QuestRewards");
-  const dummyContract = await hre.ethers.getContractFactory("DummyToken");
-  const dummyToken = await dummyContract.deploy("Gnosis", "GNO");
-  console.log("Dummy token deployed at ", dummyToken.address);
-  const quest = await questContract.deploy(dummyToken.address);
-  const txn = await dummyToken.mint(
-    ethers.utils.parseEther("10000"),
-    quest.address
+  const quest = await questContract.deploy(
+    "0x524B969793a64a602342d89BC2789D43a016B13A"
   );
-  await txn.wait();
-  const fundSigner = ethers.provider.getSigner(19);
-  const fundTxn = await fundSigner.sendTransaction({
-    to: "0x4e9606FEA76112BF275fA5764614b5847066694E",
-    value: ethers.utils.parseEther("2"),
-  });
   const createTaskTxn1 = await quest.createTask(
-    ethers.utils.parseEther("300"),
+    ethers.utils.parseEther("100"),
     0
   );
   await createTaskTxn1.wait();
-  const rootUpdate1 = await quest.changeMerkleRoot(
-    0,
-    "0x8a4e3950bbf317e136601d0f71d6a004ad9df7e9f489ccda991efda2236679c7"
-  );
-  await rootUpdate1.wait();
   const createTaskTxn2 = await quest.createTask(
-    ethers.utils.parseEther("500"),
+    ethers.utils.parseEther("100"),
     1
   );
   await createTaskTxn2.wait();
-  const rootUpdate2 = await quest.changeMerkleRoot(
-    1,
-    "0x54c9c696c952197f153bbd79c692e6a84c9ebfc01486bcdbf74efd1acb599b2a"
-  );
-  await rootUpdate2.wait();
   const createTaskTxn3 = await quest.createTask(
-    ethers.utils.parseEther("700"),
+    ethers.utils.parseEther("100"),
     2
   );
   await createTaskTxn3.wait();
-  const rootUpdate3 = await quest.changeMerkleRoot(
-    2,
-    "0x803c4145f8f1f839271cff1c0b64d5afd9f39b78cbdcd5c6072578701ad53133"
-  );
-  await rootUpdate3.wait();
   const createTaskTxn4 = await quest.createTask(
-    ethers.utils.parseEther("900"),
+    ethers.utils.parseEther("100"),
     3
   );
   await createTaskTxn4.wait();
-  const rootUpdate4 = await quest.changeMerkleRoot(
-    3,
-    "0x1f4895a102727392b5f342b95a42950fa3f9a0edafe52fc8bf6f1e69c3c23963"
-  );
-  await rootUpdate4.wait();
 
   console.log("Quests deployed at ", quest.address);
 }

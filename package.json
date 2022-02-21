@@ -6,6 +6,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "^4.5.0",
     "hardhat": "^2.8.4",
+    "hardhat-deploy": "^0.10.5",
     "hardhat-tracer": "^1.0.0-alpha.6",
     "keccak256": "^1.0.6",
     "merkletreejs": "^0.2.27"
