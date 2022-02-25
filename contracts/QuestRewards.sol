@@ -117,5 +117,10 @@ contract QuestRewards is Ownable {
         return tasks[taskId].round;
     }
 
+    function getReward(uint256 taskId) public view returns (uint256) {
+        require(taskExists[taskId], "Task does not exist");
+        return tasks[taskId].reward;
+    }
+
     receive() external payable {}
 }
